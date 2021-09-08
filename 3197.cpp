@@ -10,6 +10,7 @@ char board[MAX_SIZE][MAX_SIZE];
 char tmp;
 const int dx[4] = {1, -1, 0, 0};
 const int dy[4] = {0, 0, 1, -1};
+queue<pair<int, int> > water;
 
 inline int ptoi(int x, int y){ // converts pair to an index
     return x * c + y;
@@ -70,38 +71,30 @@ void bfs(disjointSet & ds){
     }
 }
 
-bool tick(disjointSet & ds){ // returns if the board is changed.
-    bool changes[MAX_SIZE][MAX_SIZE] = {false, };
-    bool ret = false;
-    for(int i = 0; i < r; ++i){
-        for(int j = 0; j < c; ++j){
-            if(board[i][j] == 'X')
-                continue;
-            for(int d = 0; d < 4; ++d){
-                int nx = i + dx[d], ny = j + dy[d];
-                if(0 <= nx && nx < r && 0 <= ny && ny < c && board[nx][ny] == 'X'){
-                    changes[nx][ny] = true;
-                    ret = true;
-                    ds.merge(ptoi(nx, ny), ptoi(i, j));
-                }
-            }
-        }
-    }
-    for(int i = 0; i < r; ++i){
-        for(int j = 0; j < c; ++j){
-            board[i][j] = changes[i][j]?'.':board[i][j];
-            for(int d = 0; d < 4; ++d){
-                int nx = i + dx[d], ny = j + dy[d];
-                if(0 <= nx && nx < r && 0 <= ny && ny < c) {
-                    if(changes[i][j] && changes[nx][ny]){
-                        ds.merge(ptoi(i,j), ptoi(nx, ny));
+void tick(disjointSet &ds) { // returns if the board is changed.
+    queue<pair<int, int> > newWater;
+    while(!water.empty()){
+        int i = water.front().first, j = water.front().second;
+        water.pop();
+        for(int d = 0; d < 4; ++d) {
+            int nx = i + dx[d], ny = j + dy[d];
+            if (0 <= nx && nx < r && 0 <= ny && ny < c && board[nx][ny] == 'X') {
+                newWater.push(make_pair(nx, ny));
+                board[nx][ny] = '.';
+                ds.merge(ptoi(nx, ny), ptoi(i, j));
+
+                for(int d2 = 0; d2 < 4; ++d2){
+                    int mx = nx + dx[d2], my = ny + dy[d2];
+                    if (0 <= mx && mx < r && 0 <= my && my < c && board[mx][my] != 'X'){
+                        ds.merge(ptoi(nx, ny), ptoi(mx, my));
                     }
                 }
             }
         }
     }
 
-    return ret;
+
+    water = newWater;
 }
 
 int main(){
@@ -115,15 +108,18 @@ int main(){
             if(board[i][j] == 'L'){
                 swans.push_back(ptoi(i, j));
             }
+            if(board[i][j] != 'X'){
+                water.push(make_pair(i, j));
+            }
         }
-
     }
     bfs(ds);
 
     bool flag = true;
     int cnt = 0;
+
     while(flag){
-        flag = tick(ds);
+        tick(ds);
         ++cnt;
         if(ds.find(swans[0]) == ds.find(swans[1])){
             break;
